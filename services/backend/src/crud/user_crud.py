@@ -8,6 +8,7 @@ from src.core.security import Password
 from src.database.config import async_session
 from src.database.models.user_models.user_model import User
 from src.schemas.user_schemas.auth_schema import SignUp, Token
+from src.schemas.user_schemas.user_schema import UserOut
 
 
 class UserCrud:
@@ -36,5 +37,28 @@ class UserCrud:
         except exc.IntegrityError:
             await session.rollback()
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={0: f"Sorry, this email already exists."})
+
+    @classmethod
+    async def get_by_email(cls, email: str) -> User:
+
+        async with async_session() as session:
+            async with session.begin():
+                query = await session.execute(select(User).where(User.email == email))
+
+        return query.scalars().first()
+
+    @classmethod
+    async def get_by_uid(cls, uid: str) -> User:
+
+        async with async_session() as session:
+            async with session.begin():
+                query = await session.execute(select(User).where(User.uid == uid))
+
+        return query.scalars().first()
+
+
+
+
+
 
 
