@@ -7,5 +7,5 @@ from src.database.config import Base
 class Like(Base):
     __tablename__ = "likes"
 
-    post_id = Column(Integer, ForeignKey("posts.id"))
-    like_owner_id = Column(String, ForeignKey("users.uid"))
+    post_id = Column(Integer, ForeignKey("posts.id"), primary_key=True)
+    like_owner_id = Column(String, ForeignKey("users.uid"), primary_key=True)

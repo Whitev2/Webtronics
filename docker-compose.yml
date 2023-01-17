@@ -19,7 +19,7 @@ services:
     image: postgres:15.1
     ports:
       - 7788:5432
-    env_file: .env
+    env_file: services/backend/.env
     volumes:
       - postgres_data:/var/lib/postgresql/data/
 

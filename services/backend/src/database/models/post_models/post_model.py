@@ -9,6 +9,7 @@ class Post(Base):
 
     id = Column(Integer, primary_key=True, unique=True, autoincrement=True)
     owner = Column(String, ForeignKey("users.uid"))
+    is_owner = Column(BOOLEAN)
 
     name = Column(String)
     description = Column(String)
