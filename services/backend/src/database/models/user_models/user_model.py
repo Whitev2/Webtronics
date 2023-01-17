@@ -1,7 +1,10 @@
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, BOOLEAN
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm.collections import attribute_mapped_collection
 
 from src.database.config import Base
+from src.database.models.post_models.post_model import Post
 
 
 class User(Base):
@@ -13,3 +16,9 @@ class User(Base):
     email = Column(String, unique=True)
 
     password = Column(String(128), default=None)
+
+    posts: dict[int, Post] = relationship(
+        "Post",
+        collection_class=attribute_mapped_collection("id"),
+        cascade="all, delete-orphan", lazy='joined', backref='user_posts'
+    )

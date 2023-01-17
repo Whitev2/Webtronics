@@ -1,11 +1,15 @@
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, BOOLEAN, Integer, ForeignKey
+from sqlalchemy import Column, String, DateTime, BOOLEAN, Integer, ForeignKey, Table
 
 from src.database.config import Base
 
+user_like = Table('user_like', Base.metadata,
+                  Column("post_id", Integer, ForeignKey("posts.id")),
+                  Column("user_id", String, ForeignKey("users.uid"))
+                  )
 
-class Like(Base):
-    __tablename__ = "likes"
+user_dislike = Table('user_dislike', Base.metadata,
+                     Column("post_id", Integer, ForeignKey("posts.id")),
+                     Column("user_id", String, ForeignKey("users.uid"))
+                     )
 
-    post_id = Column(Integer, ForeignKey("posts.id"), primary_key=True)
-    like_owner_id = Column(String, ForeignKey("users.uid"), primary_key=True)
