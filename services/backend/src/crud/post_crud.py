@@ -133,7 +133,7 @@ class PostCrud:
         stmt = (
             update(Post).
             where(Post.id == post_id).
-            values(like_count=post.like_count - 1 if post.like_count >= 1 else 0)
+            values(dislike_count=post.dislike_count + 1)
         )
 
         async with async_session() as session:
