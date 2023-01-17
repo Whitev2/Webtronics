@@ -11,11 +11,11 @@ from src.database.config import async_session
 from src.database.models.user_models.user_model import User
 from src.routers.dopends import get_user_crud
 from src.schemas.user_schemas.auth_schema import SignUp, Token
-from src.schemas.user_schemas.user_schema import UserOut
+from src.schemas.user_schemas.user_schema import UserOut, CurrentUser
 
 
 async def get_current_user(users: UserCrud = Depends(get_user_crud),
-                           token: str = Depends(JWTBearer())) -> UserOut:
+                           token: str = Depends(JWTBearer())) -> CurrentUser:
     cred_exception = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Credentials are not valid")
     try:
         payload = JwtHandler().decode_access_token(token)
@@ -32,5 +32,4 @@ async def get_current_user(users: UserCrud = Depends(get_user_crud),
     user = await users.get_by_email(email)
     if user is None:
         raise cred_exception
-
-    return user
+    return CurrentUser(user=UserOut(**user.__dict__))

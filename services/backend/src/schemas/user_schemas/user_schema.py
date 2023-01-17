@@ -9,3 +9,7 @@ class UserOut(BaseModel):
     full_name: str
     email: str
 
+
+class CurrentUser(BaseModel):
+    user: UserOut
+
