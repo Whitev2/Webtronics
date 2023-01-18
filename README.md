@@ -5,6 +5,7 @@
 - FastApi ( Web framework for building APIs );
 - Docker and Docker Compose ( containerization );
 - PostgreSQL ( database );
+- Redis ( cache, database )
 - SQLAlchemy ( working with database from Python );
 - Alembic ( database migrations made easy );
 - Pydantic ( models )
@@ -23,7 +24,7 @@
 git clone https://github.com/Whitev2/Webtronics.git
 ```
 
-2. Собрать и запустить контейнеры :
+2. Собрать и запустить контейнеры:
 ```sh
 docker-compose up -d --build
 ```
@@ -32,12 +33,12 @@ docker-compose up -d --build
 ### Дополнительные команды
 
 
-1. Создание файла миграций
+1. Создание файла миграций:
 ```sh
 docker-compose exec backend alembic revision --autogenerate -m "revision_name"
 ```
 
-2. Обновление базы данных
+2. Обновление базы данных:
 ```sh
 docker-compose exec app alembic upgrade head
 ```
