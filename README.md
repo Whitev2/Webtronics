@@ -7,7 +7,11 @@
 - Alembic ( database migrations made easy );
 - Pydantic ( models )
 
+<hr/>
 
+![image](templates/image.png)
+
+<hr/>
 
 ### Installation
 
@@ -19,6 +23,7 @@ docker-compose build
 docker-compose up
 ```
 
+<hr/>
 
 
 ### Migrations
@@ -30,3 +35,6 @@ docker-compose exec backend alembic revision --autogenerate -m "name"
 ```sh
 docker-compose exec backend alembic upgrade head
 ```
+
+<hr/>
+
