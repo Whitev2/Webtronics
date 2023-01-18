@@ -2,23 +2,10 @@ version: '3.8'
 
 services:
 
-  backend:
-    build: ./services/backend
-    ports:
-      - 4343:4343
-    environment:
-      - SECRET_KEY=09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7
-    volumes:
-      - ./services/backend:/app
-    command: uvicorn src.main:app --reload --host 0.0.0.0 --port 4343
-    depends_on:
-      - db
-      - redis
-
   db:
     image: postgres:15.1
     ports:
-      - 7788:5432
+      - "7788:5432"
     env_file: services/backend/.env
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -31,6 +18,17 @@ services:
       - "2279:6379"
     volumes:
       - redis_data:/var/lib/redis/data/
+
+  backend:
+    build: ./services/backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/backend:/webtron
+    command: sh -c " alembic upgrade head && uvicorn src.main:app --reload --host 0.0.0.0 --port 8000 "
+    depends_on:
+      - db
+      - redis
 
 
 volumes:
