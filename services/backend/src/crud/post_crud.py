@@ -1,3 +1,4 @@
+from typing import List
 from uuid import uuid4
 
 from sqlalchemy import exc, select, insert, update, delete
@@ -9,8 +10,7 @@ from src.database.config import async_session
 from src.database.models.post_models.like_model import user_like
 from src.database.models.post_models.post_model import Post
 from src.database.models.user_models.user_model import User
-from src.schemas.post_schemas.post_schema import CurrentPost, PostOut, PostIn
-from src.schemas.user_schemas.auth_schema import SignUp, Token
+from src.schemas.post_schemas.post_schema import CurrentPost, PostOut, PostIn, PostReactionOut, UserReactions
 from src.schemas.user_schemas.user_schema import UserOut, CurrentUser
 
 
@@ -95,8 +95,11 @@ class PostCrud:
                 await session.rollback()
 
     @classmethod
-    async def add_like(cls, post_id: int, current_user: CurrentUser):
-        post: Post = await cls.get_by_id(post_id)
+    async def add_like(cls, post_id: int, current_user: CurrentUser) -> PostReactionOut:
+        async with async_session() as session:
+            async with session.begin():
+                user: User = await session.get(User, current_user.user.uid)
+                post: Post = await session.get(Post, post_id)
 
         if post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
@@ -104,25 +107,31 @@ class PostCrud:
         if post.owner == current_user.user.uid:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot edit your post")
 
-        stmt = (
-            update(Post).
-            where(Post.id == post_id).
-            values(like_count=post.like_count + 1)
-        )
+        if user in post.user_likes:  # If the user is on the likes list
+            post.user_likes.remove(user)
+            post.like_count -= 1
 
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(stmt)
+        else:
+            post.user_likes.append(user)
+            post.like_count += 1
 
-            try:
-                await session.commit()
+            if user in post.user_dislike:  # if the user clicked like - dislike removed
+                post.user_dislike.remove(user)
+                post.dislike_count -= 1
 
-            except exc.IntegrityError:
-                await session.rollback()
+        try:
+            session.add(post)
+            await session.commit()
+            return PostReactionOut(**post.__dict__)
+        except exc.IntegrityError:
+            await session.rollback()
 
     @classmethod
-    async def add_dislike(cls, post_id: int, current_user: CurrentUser):
-        post: Post = await cls.get_by_id(post_id)
+    async def add_dislike(cls, post_id: int, current_user: CurrentUser) -> PostReactionOut:
+        async with async_session() as session:
+            async with session.begin():
+                user: User = await session.get(User, current_user.user.uid)
+                post: Post = await session.get(Post, post_id)
 
         if post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
@@ -130,18 +139,21 @@ class PostCrud:
         if post.owner == current_user.user.uid:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot edit your post")
 
-        stmt = (
-            update(Post).
-            where(Post.id == post_id).
-            values(dislike_count=post.dislike_count + 1)
-        )
+        if user in post.user_dislike:  # If the user is on the dislikes list
+            post.user_dislike.remove(user)
+            post.dislike_count -= 1
 
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(stmt)
+        else:
+            post.user_dislike.append(user)
+            post.dislike_count += 1
 
-            try:
-                await session.commit()
+            if user in post.user_likes:  # if the user clicked dislike - like removed
+                post.user_likes.remove(user)
+                post.like_count -= 1
 
-            except exc.IntegrityError:
-                await session.rollback()
+        try:
+            session.add(post)
+            await session.commit()
+            return PostReactionOut(**post.__dict__)
+        except exc.IntegrityError:
+            await session.rollback()

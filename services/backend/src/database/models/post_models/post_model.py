@@ -21,8 +21,8 @@ class Post(Base):
     like_count = Column(Integer, default=0)  # А не пора ли уходить от лайков к эмодзи?)
     dislike_count = Column(Integer, default=0)
 
-    user_likes: list[user_like] = relationship("User", secondary=user_like, backref="user-likes")
-    user_dislike: list[user_dislike] = relationship("User", secondary=user_dislike, backref="user-dislikes")
+    user_likes: list = relationship("User", secondary=user_like, backref="user-likes",  lazy='joined')
+    user_dislike: list = relationship("User", secondary=user_dislike, backref="user-dislikes", lazy='joined')
 
     created_at = Column(DateTime, default=datetime.utcnow())
     modified_at = Column(DateTime, default=datetime.utcnow(), onupdate=datetime.utcnow())
