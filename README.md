@@ -7,7 +7,7 @@
 - Alembic ( database migrations made easy );
 - Pydantic ( models )
 
-<hr/>
+<hr style="border-width: 10px; border-color: red;">
 
 ![image](templates/image.png)
 
