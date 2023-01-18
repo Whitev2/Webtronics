@@ -1,8 +1,5 @@
 from datetime import datetime
-from typing import List
-
-from pydantic import constr
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel
 
 
 class PostIn(BaseModel):
@@ -35,7 +32,3 @@ class UserReactions(BaseModel):
 
 class PostReactionOut(PostOut):
     pass
-
-
-
-

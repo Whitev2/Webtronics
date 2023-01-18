@@ -1,49 +1,40 @@
 from typing import List
-from uuid import uuid4
-
-from sqlalchemy import exc, select, insert, update, delete
 from fastapi import HTTPException, status
 
-from src.core.jwt_handler import JwtHandler
-from src.core.security import Password
-from src.database.config import async_session
-from src.database.models.post_models.like_model import user_like
+from sqlalchemy import exc, select, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.database.models.post_models.post_model import Post
 from src.database.models.user_models.user_model import User
-from src.schemas.post_schemas.post_schema import CurrentPost, PostOut, PostIn, PostReactionOut, UserReactions
-from src.schemas.user_schemas.user_schema import UserOut, CurrentUser
+from src.schemas.post_schemas.post_schema import CurrentPost, PostOut, PostIn, PostReactionOut
+from src.schemas.user_schemas.user_schema import CurrentUser
 
 
 class PostCrud:
 
-    @classmethod
-    async def create(cls, post_in: PostIn, current_user: CurrentUser) -> CurrentPost:
+    def __init__(self, db_session: AsyncSession) -> None:
+        self._db_session: AsyncSession = db_session
+
+    async def create(self, post_in: PostIn, current_user: CurrentUser) -> CurrentPost:
+
         post = Post(**post_in.dict(exclude_unset=True), owner=current_user.user.uid)
+        user: User = await self._db_session.get(User, current_user.user.uid)
+        user.posts.append(post)
+
         try:
-            async with async_session() as session:
-                async with session.begin():
-                    user: User = await session.get(User, current_user.user.uid)
-                    user.posts.append(post)
-                    session.add(user)
-                    await session.commit()
+            self._db_session.add(user)
+            await self._db_session.commit()
+        except Exception as e:
+            await self._db_session.rollback()
 
-            return CurrentPost(post=PostOut(**post.__dict__))
+        return CurrentPost(post=PostOut(**post.__dict__))
 
-        except exc.IntegrityError:
-            await session.rollback()
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                                detail=f"Sorry, this post already exists.")
+    async def get_by_id(self, post_id: int) -> Post:
+        return await self._db_session.get(Post, post_id)
 
-    @classmethod
-    async def get_by_id(cls, post_id: int) -> Post:
+    async def update(self, post_id: int, post_in: PostIn, current_user: CurrentUser) -> CurrentPost:
 
-        async with async_session() as session:
-            async with session.begin():
-                return await session.get(Post, post_id)
-
-    @classmethod
-    async def update(cls, post_id: int, post_in: PostIn, current_user: CurrentUser) -> CurrentPost:
-        current_post: Post = await cls.get_by_id(post_id)
+        current_post: Post = await self.get_by_id(post_id)
 
         if current_post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current post not found")
@@ -51,27 +42,24 @@ class PostCrud:
         if current_post.owner != current_user.user.uid:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can't edit someone else's post")
 
-        values = {**post_in.dict(exclude_unset=True)}
         stmt = (
             update(Post).
             where(Post.id == post_id).
-            values(values)
+            values({**post_in.dict(exclude_unset=True)})
         )
 
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(stmt)
+        try:
+            await self._db_session.execute(stmt)
+            await self._db_session.commit()
+        except exc.IntegrityError:
+            await self._db_session.rollback()
 
-            try:
-                await session.commit()
-                new_post: Post = await session.get(Post, post_id)
-                return CurrentPost(post=PostOut(**new_post.__dict__))
-            except exc.IntegrityError:
-                await session.rollback()
+        new_post: Post = await self._db_session.get(Post, post_id)
+        return CurrentPost(post=PostOut(**new_post.__dict__))
 
-    @classmethod
-    async def delete(cls, post_id: int, current_user: CurrentUser):
-        current_post: Post = await cls.get_by_id(post_id)
+    async def delete(self, post_id: int, current_user: CurrentUser):
+
+        current_post: Post = await self.get_by_id(post_id)
 
         if current_post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current post not found")
@@ -84,22 +72,18 @@ class PostCrud:
             where(Post.id == post_id)
         )
 
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(stmt)
+        try:
+            await self._db_session.execute(stmt)
+            await self._db_session.commit()
+        except exc.IntegrityError:
+            await self._db_session.rollback()
 
-            try:
-                await session.commit()
-                return HTTPException(status_code=status.HTTP_200_OK, detail=f"Post with id <{post_id}> has ben deleted")
-            except exc.IntegrityError:
-                await session.rollback()
+        return HTTPException(status_code=status.HTTP_200_OK, detail=f"Post with id <{post_id}> has ben deleted")
 
-    @classmethod
-    async def add_like(cls, post_id: int, current_user: CurrentUser) -> PostReactionOut:
-        async with async_session() as session:
-            async with session.begin():
-                user: User = await session.get(User, current_user.user.uid)
-                post: Post = await session.get(Post, post_id)
+    async def add_like(self, post_id: int, current_user: CurrentUser) -> PostReactionOut:
+
+        user: User = await self._db_session.get(User, current_user.user.uid)
+        post: Post = await self._db_session.get(Post, post_id)
 
         if post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
@@ -120,18 +104,17 @@ class PostCrud:
                 post.dislike_count -= 1
 
         try:
-            session.add(post)
-            await session.commit()
-            return PostReactionOut(**post.__dict__)
+            self._db_session.add(post)
+            await self._db_session.commit()
         except exc.IntegrityError:
-            await session.rollback()
+            await self._db_session.rollback()
 
-    @classmethod
-    async def add_dislike(cls, post_id: int, current_user: CurrentUser) -> PostReactionOut:
-        async with async_session() as session:
-            async with session.begin():
-                user: User = await session.get(User, current_user.user.uid)
-                post: Post = await session.get(Post, post_id)
+        return PostReactionOut(**post.__dict__)
+
+    async def add_dislike(self, post_id: int, current_user: CurrentUser) -> PostReactionOut:
+
+        user: User = await self._db_session.get(User, current_user.user.uid)
+        post: Post = await self._db_session.get(Post, post_id)
 
         if post is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
@@ -152,17 +135,16 @@ class PostCrud:
                 post.like_count -= 1
 
         try:
-            session.add(post)
-            await session.commit()
-            return PostReactionOut(**post.__dict__)
+            self._db_session.add(post)
+            await self._db_session.commit()
         except exc.IntegrityError:
-            await session.rollback()
+            await self._db_session.rollback()
 
-    @classmethod
-    async def get_owner_posts(cls, current_user: CurrentUser) -> List[CurrentPost]:
-        async with async_session() as session:
-            async with session.begin():
-                user: User = await session.get(User, current_user.user.uid)
+        return PostReactionOut(**post.__dict__)
+
+    async def get_owner_posts(self, current_user: CurrentUser) -> List[CurrentPost]:
+
+        user: User = await self._db_session.get(User, current_user.user.uid)
 
         post_list = list()
         for post in user.posts:
@@ -170,11 +152,9 @@ class PostCrud:
 
         return post_list
 
-    @classmethod
-    async def get_user_posts(cls, user_id: str) -> List[CurrentPost]:
-        async with async_session() as session:
-            async with session.begin():
-                user: User = await session.get(User, user_id)
+    async def get_user_posts(self, user_id: str) -> List[CurrentPost]:
+
+        user: User = await self._db_session.get(User, user_id)
 
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -185,34 +165,26 @@ class PostCrud:
 
         return post_list
 
-    @classmethod
-    async def get_all_posts(cls, page: int, page_size: int) -> List[CurrentPost]:
-        async with async_session() as session:
-            async with session.begin():
-                result = await session.execute(cls.page_sizer(page, page_size))
+    async def get_all_posts(self, page: int, page_size: int) -> List[CurrentPost]:
 
-            posts = result.unique()
+        result = await self._db_session.execute(self.page_sizer(page, page_size))
 
-            order_list = list()
-            for post in posts:
-                order_list.append(CurrentPost(post=PostOut(**post[0].__dict__)))
+        posts = result.unique()
 
-            return order_list
+        order_list = list()
+        for post in posts:
+            order_list.append(CurrentPost(post=PostOut(**post[0].__dict__)))
+
+        return order_list
 
     @classmethod
     def page_sizer(cls, page: int = 0, page_size: int = 10):
+
         query = select(Post).order_by(Post.id.desc())
+
         if page_size:
             query = query.limit(page_size)
         if page:
             query = query.offset(page * page_size)
 
         return query
-
-
-
-
-
-
-
-

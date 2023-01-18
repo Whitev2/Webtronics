@@ -1,6 +1,4 @@
 from datetime import datetime
-from typing import Union
-
 from sqlalchemy import Column, String, DateTime, BOOLEAN, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -12,8 +10,7 @@ class Post(Base):
     __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True, unique=True, autoincrement=True)
-    owner = Column(String, ForeignKey("users.uid"))
-    is_owner = Column(BOOLEAN)
+    owner = Column(String, ForeignKey("users.uid", ondelete="CASCADE"))
 
     name = Column(String)
     description = Column(String)
@@ -21,8 +18,10 @@ class Post(Base):
     like_count = Column(Integer, default=0)  # А не пора ли уходить от лайков к эмодзи?)
     dislike_count = Column(Integer, default=0)
 
-    user_likes: list = relationship("User", secondary=user_like, backref="user-likes",  lazy='joined')
-    user_dislike: list = relationship("User", secondary=user_dislike, backref="user-dislikes", lazy='joined')
+    user_likes: list = relationship("User", secondary=user_like,
+                                    backref="user-likes",  lazy='joined', single_parent=True)
+    user_dislike: list = relationship("User", secondary=user_dislike,
+                                      backref="user-dislikes", lazy='joined', single_parent=True)
 
     created_at = Column(DateTime, default=datetime.now())
     modified_at = Column(DateTime, default=datetime.now(), onupdate=datetime.now())

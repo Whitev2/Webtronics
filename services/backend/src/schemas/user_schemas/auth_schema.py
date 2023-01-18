@@ -12,12 +12,14 @@ class SignUp(SignIn):
 
     password_2: constr(min_length=8, max_length=128)
 
+    @classmethod
     @validator('password_2')
     def passwords_match(cls, v, values, **kwargs):
         if 'password' in values and v != values['password']:
             raise ValueError('passwords do not match')
         return v
 
+    @classmethod
     @validator('full_name')
     def username_alphanumeric(cls, v):
         assert v.isalnum(), 'must be alphanumeric'

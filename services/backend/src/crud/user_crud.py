@@ -1,13 +1,14 @@
 import asyncio
 from uuid import uuid4
 
-from sqlalchemy import exc, select, insert, update, delete
 from fastapi import HTTPException, status
+
+from sqlalchemy import exc, select, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.jwt_handler import JwtHandler
 from src.core.security import Password
 from src.core.services import Service
-from src.database.config import async_session
 from src.database.models.user_models.user_model import User
 from src.database.redis import DataRedis
 from src.schemas.user_schemas.auth_schema import SignUp, Token
@@ -15,9 +16,10 @@ from src.schemas.user_schemas.user_schema import UserOut, CurrentUser, UpdateUse
 
 
 class UserCrud:
+    def __init__(self, db_session: AsyncSession) -> None:
+        self._db_session: AsyncSession = db_session
 
-    @classmethod
-    async def create(cls, signup: SignUp) -> Token:
+    async def create(self, signup: SignUp) -> Token:
 
         asyncio.create_task(Service.hand_search_email(signup.email))
 
@@ -28,13 +30,12 @@ class UserCrud:
         )
 
         try:
-            async with async_session() as session:
-                async with session.begin():
-                    session.add(user)
-                    await session.commit()
+
+            self._db_session.add(user)
+            await self._db_session.commit()
 
         except exc.IntegrityError:
-            await session.rollback()
+            await self._db_session.rollback()
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Sorry, this email already exists.")
 
         return Token(
@@ -43,70 +44,42 @@ class UserCrud:
             )
         )
 
-    @classmethod
-    async def get_by_email(cls, email: str) -> User:
+    async def get_by_email(self, email: str) -> User:
 
-        async with async_session() as session:
-            async with session.begin():
-                query = await session.execute(select(User).where(User.email == email))
-
+        query = await self._db_session.execute(select(User).where(User.email == email))
         return query.scalars().first()
 
-    @classmethod
-    async def get_by_uid(cls, uid: str) -> User:
+    async def get_by_uid(self, uid: str) -> User:
 
-        async with async_session() as session:
-            async with session.begin():
-                query = await session.execute(select(User).where(User.uid == uid))
-
+        query = await self._db_session.execute(select(User).where(User.uid == uid))
         return query.scalars().first()
 
-    @classmethod
-    async def update(cls, update_data: UpdateUser, current_user: CurrentUser):
-
-        if current_user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-        values = {**update_data.dict(exclude_unset=True)}
+    async def update(self, update_data: UpdateUser, current_user: CurrentUser):
 
         stmt = (
             update(User).
             where(User.uid == current_user.user.uid).
-            values(values)
+            values({**update_data.dict(exclude_unset=True)})
         )
 
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(stmt)
+        try:
+            await self._db_session.execute(stmt)
+            await self._db_session.commit()
+        except exc.IntegrityError:
+            await self._db_session.rollback()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This email already exist")
 
-            try:
-                await session.commit()
-                new_user: User = await session.get(User, current_user.user.uid)
-                return CurrentUser(user=UserOut(**new_user.__dict__))
-            except exc.IntegrityError:
-                await session.rollback()
+        new_user: User = await self._db_session.get(User, current_user.user.uid)
+        return CurrentUser(user=UserOut(**new_user.__dict__))
 
-    @classmethod
-    async def delete(cls, current_user: CurrentUser):
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(delete(User).where(User.uid == current_user.user.uid))
-                await session.commit()
+    async def delete(self, current_user: CurrentUser):
 
-        return {"msg": f"User <{current_user.user.uid}> has been deleted"}
+        await self._db_session.execute(delete(User).where(User.uid == current_user.user.uid))
+        await self._db_session.commit()
+
+        return HTTPException(status_code=200, detail=f"User <{current_user.user.uid}> has been deleted")
 
     @classmethod
     async def block_token(cls, token):
         await DataRedis().block_jwt(token)
         return HTTPException(status_code=200, detail="token has been blocked")
-
-
-
-
-
-
-
-
-
-
-

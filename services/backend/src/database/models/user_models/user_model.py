@@ -1,10 +1,7 @@
-from datetime import datetime
-from sqlalchemy import Column, String, DateTime, BOOLEAN
+from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm.collections import attribute_mapped_collection
 
 from src.database.config import Base
-from src.database.models.post_models.post_model import Post
 
 
 class User(Base):
@@ -19,5 +16,5 @@ class User(Base):
 
     posts: list = relationship(
         "Post",
-         lazy='joined', backref='user_posts'
+        lazy='joined', backref='user_posts', cascade="all"
     )
