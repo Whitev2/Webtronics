@@ -19,8 +19,9 @@ services:
     volumes:
       - redis_data:/var/lib/redis/data/
 
-  backend:
+  app:
     build: app
+    container_name: app
     ports:
       - "8000:8000"
     volumes:
