@@ -11,7 +11,7 @@
 
 <hr/>
 
-![image](templates/image.png)
+![image](templates/img.png)
 
 <hr/>
 
@@ -30,7 +30,7 @@ docker-compose up -d --build
 
 3. Создать миграции баз:
 ```sh
-docker-compose exec backend alembic upgrade head
+docker-compose exec app alembic upgrade head
 ```
 #### Остановка контейнеров:
 ```sh
@@ -48,11 +48,11 @@ docker-compose up
 ### Миграции
 
 ```sh
-docker-compose exec backend alembic revision --autogenerate -m "name"
+docker-compose exec app alembic revision --autogenerate -m "name"
 ```
 
 ```sh
-docker-compose exec backend alembic upgrade head
+docker-compose exec app alembic upgrade head
 ```
 
 <hr/>
