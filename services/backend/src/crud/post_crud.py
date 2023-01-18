@@ -23,7 +23,7 @@ class PostCrud:
             async with async_session() as session:
                 async with session.begin():
                     user: User = await session.get(User, current_user.user.uid)
-                    user.posts[post.id] = post
+                    user.posts.append(post)
                     session.add(user)
                     await session.commit()
 
@@ -157,3 +157,55 @@ class PostCrud:
             return PostReactionOut(**post.__dict__)
         except exc.IntegrityError:
             await session.rollback()
+
+    @classmethod
+    async def get_owner_posts(cls, current_user: CurrentUser) -> List[CurrentPost]:
+        async with async_session() as session:
+            async with session.begin():
+                user: User = await session.get(User, current_user.user.uid)
+
+        post_list = list()
+        for post in user.posts:
+            post_list.append(CurrentPost(post=PostOut(**post.__dict__)))
+
+        return post_list
+
+    @classmethod
+    async def get_user_posts(cls, user_id: str) -> List[CurrentPost]:
+        async with async_session() as session:
+            async with session.begin():
+                user: User = await session.get(User, user_id)
+
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        post_list = list()
+        for post in user.posts:
+            post_list.append(CurrentPost(post=PostOut(**post.__dict__)))
+
+        return post_list
+
+    @classmethod
+    async def get_all_posts(cls, page: int = 0, page_size: int = 10) -> List[CurrentPost]:
+        async with async_session() as session:
+            async with session.begin():
+                query = select(Post).order_by(Post.id.desc())
+                if page_size:
+                    query = query.limit(page_size)
+                if page:
+                    query = query.offset(page * page_size)
+                try:
+                    result = await session.execute(query)
+
+                    posts = result.unique()
+
+                    order_list = list()
+                    for post in posts:
+                        order_list.append(CurrentPost(post=PostOut(**post[0].__dict__)))
+
+                    return order_list
+                except exc.IntegrityError:
+                    pass
+
+
+

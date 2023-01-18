@@ -4,7 +4,7 @@ from pydantic import BaseSettings, PostgresDsn
 
 
 class Config(BaseSettings):
-    PostgresUrl: PostgresDsn = "postgresql+asyncpg://webtron:webtron@db:5432/webtron"
+    PostgresUrl: PostgresDsn
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     SECRET_KEY: str
     ALGORITHM: str

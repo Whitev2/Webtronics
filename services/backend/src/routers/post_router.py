@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, HTTPException, status
 from fastapi import Depends
 
@@ -54,4 +56,25 @@ async def add_dislike(post_id: int,
                       current_user: CurrentUser = Depends(get_current_user),
                       post: PostCrud = Depends(get_post_crud)):
     post = await post.add_dislike(post_id, current_user)
+    return post
+
+
+@router.get("/", response_model=List[CurrentPost])
+async def owner_posts(current_user: CurrentUser = Depends(get_current_user),
+                      post: PostCrud = Depends(get_post_crud)):
+    posts = await post.get_owner_posts(current_user)
+    return posts
+
+
+@router.get("/{user_id}", response_model=List[CurrentPost])
+async def user_posts(user_id: str,
+                     post: PostCrud = Depends(get_post_crud)):
+    post = await post.get_user_posts(user_id)
+    return post
+
+
+@router.get("/{page}/{page_size}", response_model=List[CurrentPost])
+async def all_posts(page: int, page_size: int,
+                    post: PostCrud = Depends(get_post_crud)):
+    post = await post.get_all_posts(page, page_size)
     return post

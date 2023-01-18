@@ -24,5 +24,5 @@ class Post(Base):
     user_likes: list = relationship("User", secondary=user_like, backref="user-likes",  lazy='joined')
     user_dislike: list = relationship("User", secondary=user_dislike, backref="user-dislikes", lazy='joined')
 
-    created_at = Column(DateTime, default=datetime.utcnow())
-    modified_at = Column(DateTime, default=datetime.utcnow(), onupdate=datetime.utcnow())
+    created_at = Column(DateTime, default=datetime.now())
+    modified_at = Column(DateTime, default=datetime.now(), onupdate=datetime.now())

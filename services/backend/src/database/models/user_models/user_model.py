@@ -17,8 +17,7 @@ class User(Base):
 
     password = Column(String(128), default=None)
 
-    posts: dict[int, Post] = relationship(
+    posts: list = relationship(
         "Post",
-        collection_class=attribute_mapped_collection("id"),
-        cascade="all, delete-orphan", lazy='joined', backref='user_posts'
+         lazy='joined', backref='user_posts'
     )
