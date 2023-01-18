@@ -186,26 +186,33 @@ class PostCrud:
         return post_list
 
     @classmethod
-    async def get_all_posts(cls, page: int = 0, page_size: int = 10) -> List[CurrentPost]:
+    async def get_all_posts(cls, page: int, page_size: int) -> List[CurrentPost]:
         async with async_session() as session:
             async with session.begin():
-                query = select(Post).order_by(Post.id.desc())
-                if page_size:
-                    query = query.limit(page_size)
-                if page:
-                    query = query.offset(page * page_size)
-                try:
-                    result = await session.execute(query)
+                result = await session.execute(cls.page_sizer(page, page_size))
 
-                    posts = result.unique()
+            posts = result.unique()
 
-                    order_list = list()
-                    for post in posts:
-                        order_list.append(CurrentPost(post=PostOut(**post[0].__dict__)))
+            order_list = list()
+            for post in posts:
+                order_list.append(CurrentPost(post=PostOut(**post[0].__dict__)))
 
-                    return order_list
-                except exc.IntegrityError:
-                    pass
+            return order_list
+
+    @classmethod
+    def page_sizer(cls, page: int = 0, page_size: int = 10):
+        query = select(Post).order_by(Post.id.desc())
+        if page_size:
+            query = query.limit(page_size)
+        if page:
+            query = query.offset(page * page_size)
+
+        return query
+
+
+
+
+
 
 
 

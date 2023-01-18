@@ -19,7 +19,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", status_code=201, response_model=CurrentPost)
+@router.post("/create", status_code=201, response_model=CurrentPost)
 async def create(create_post: PostIn,
                  current_user: CurrentUser = Depends(get_current_user),
                  post: PostCrud = Depends(get_post_crud)):
@@ -27,7 +27,7 @@ async def create(create_post: PostIn,
     return post
 
 
-@router.put("/", status_code=200, response_model=CurrentPost)
+@router.put("/update", status_code=200, response_model=CurrentPost)
 async def update(post_id: int, update_data: PostIn,
                  current_user: CurrentUser = Depends(get_current_user),
                  post: PostCrud = Depends(get_post_crud)):
@@ -35,8 +35,8 @@ async def update(post_id: int, update_data: PostIn,
     return post
 
 
-@router.delete("/", status_code=200)
-async def update(post_id: int,
+@router.delete("/delete", status_code=200)
+async def delete(post_id: int,
                  current_user: CurrentUser = Depends(get_current_user),
                  post: PostCrud = Depends(get_post_crud)):
     post = await post.delete(post_id, current_user)
@@ -60,7 +60,8 @@ async def add_dislike(post_id: int,
 
 
 @router.get("/", response_model=List[CurrentPost])
-async def owner_posts(current_user: CurrentUser = Depends(get_current_user),
+async def owner_posts(
+                      current_user: CurrentUser = Depends(get_current_user),
                       post: PostCrud = Depends(get_post_crud)):
     posts = await post.get_owner_posts(current_user)
     return posts

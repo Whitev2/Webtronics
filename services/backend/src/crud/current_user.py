@@ -9,6 +9,7 @@ from src.core.security import Password, JWTBearer
 from src.crud.user_crud import UserCrud
 from src.database.config import async_session
 from src.database.models.user_models.user_model import User
+from src.database.redis import DataRedis
 from src.routers.dopends import get_user_crud
 from src.schemas.user_schemas.auth_schema import SignUp, Token
 from src.schemas.user_schemas.user_schema import UserOut, CurrentUser
@@ -17,6 +18,12 @@ from src.schemas.user_schemas.user_schema import UserOut, CurrentUser
 async def get_current_user(users: UserCrud = Depends(get_user_crud),
                            token: str = Depends(JWTBearer())) -> CurrentUser:
     cred_exception = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Credentials are not valid")
+
+    token_status = await DataRedis().get_data(token)
+
+    if token_status == 'blocked':
+        raise cred_exception
+
     try:
         payload = JwtHandler().decode_access_token(token)
     except AttributeError:
