@@ -1,6 +1,4 @@
 import asyncio
-
-import aiohttp
 from io import StringIO
 import sys
 
@@ -25,20 +23,30 @@ class OutputInterceptor(list):
         sys.stdout = self._stdout
 
 
+async def generator(cont, name):
+    for i in range(10):
+        yield (name, f"INFO: line {i}")
+        await asyncio.sleep(0.4)
+
+
 async def test_data(cont, name):
     """
-    Тестовая функция для вывода данных
+    Заменяет асинхронный циклв тестовой функции
     """
-    print(name, "INFO: line1")
-    print(name, "INFO: line1")
-    print(name, "INFO: line1")
-    print(name, "INFO: line1")
-    print(name, "INFO: line1")
+    async for i, b in generator(cont, name):
+        print(i, b)
 
 
-def interceptor(cont, name):
+def interceptor():
+    """
+    Вызывает test_data в двух потоках
+    """
     with OutputInterceptor() as output:
-        asyncio.run(test_data(cont, name))
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(asyncio.gather(test_data("1", "multithread_1"), test_data("2", "multithread_2")))
+        finally:
+            loop.close()
 
         # await logs(cont, name")
 
@@ -46,10 +54,10 @@ def interceptor(cont, name):
 
 
 def test_debug_level():
-    for log in interceptor(777, "dev"):
+    for log in interceptor():
         assert "INFO" in log
 
 
 def test_name():
-    for log in interceptor(777, "dev"):
-        assert "dev" in log
+    for log in interceptor():
+        assert "multithread" in log
