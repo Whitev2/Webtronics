@@ -31,15 +31,6 @@ services:
       - db
       - redis
 
-  tests:
-    build: templates/test_func/docker
-    container_name: test_func
-    ports:
-      - "8002:8002"
-    volumes:
-      - ./templates/test_func:/test_func
-
-
 
 volumes:
   postgres_data:
