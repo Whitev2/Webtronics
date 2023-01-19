@@ -10,7 +10,6 @@ class Config(BaseSettings):
     ALGORITHM: str
     HAND_EMAIL_API: str
 
-
     class Config:
         env_file = '.env'
         env_file_encoding = 'utf-8'
